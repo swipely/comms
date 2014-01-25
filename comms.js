@@ -1,36 +1,111 @@
-(function () {
-  var Comms = function (queue, responses, responders) {
-    return configure([], {}, []);
+/**
+@module Comms
+@example
+  using jQuery's ajax as the transport
+
+  var fooTransmission = {
+    transport: $.ajax,
+    key: 'foo',
+    options: { url: '/foo.json', method: 'get' }
   };
 
-  var configure = function (queue, responses, responders) {
-    return {
-      add: function (requestOptions, params) {
-        return configure(queue.concat(requestOptions), responses, responders);
-      },
+  var barTransmission = {
+    transport: $.ajax,
+    key: 'bar',
+    options: { url: '/bar.json', method: 'get' }
+  };
 
-      forEveryResponse: function (responder) {
-        return configure(queue, responses, responders.concat(responder));
-      },
+  Comms()
+    .add(fooTransmission)
+    .add(barTransmission)
+    .forEveryResponse(function (responses) {
+      // do something with responses.foo or responses.bar
+    })
+    .transmit();
+**/
 
-      transmit: function () {
-        queue.forEach(function (requestOptions) {
-          // server responds
-          var handler = function (resp) {
-            responses[requestOptions.key] = resp;
+"use strict";
 
-            responders.forEach(function (responder) {
-              responder(responses);
-            });
-          };
+var freeze = Object.freeze;
 
-          requestOptions.transport(requestOptions.request, function (resp) {
-            handler(requestOptions.transform(resp));
+/**
+@method build
+@param {Array} queue
+@param {Object} responses
+@param {Array} responders
+@return {Object}
+**/
+var build = function (queue, responses, responders) {
+  return {
+    /**
+    @property __queue
+    @private
+    **/
+    __queue: queue,
+
+    /**
+    @property __responses
+    @private
+    **/
+    __responses: responses,
+
+    /**
+    @property __responders
+    @private
+    **/
+    __responders: responders,
+
+    /**
+    add an async transmission
+
+    @method add
+    @param {Object} transmission
+    @return {Object}
+    **/
+    add: function (transmission) {
+      return freeze(build(queue.concat(transmission), responses, responders));
+    },
+
+    /**
+    add an async transmission
+
+    @method add
+    @param {Object} transmission
+    @return {Object}
+    **/
+    forEveryResponse: function (responder) {
+      return freeze(build(queue, responses, responders.concat(responder)));
+    },
+
+    /**
+    transmit all added transmissions
+
+    @method transmit
+    **/
+    transmit: function () {
+      queue.forEach(function (transmission) {
+        // server responds
+        var handler = function (resp) {
+          responses[transmission.key] = resp;
+
+          responders.forEach(function (responder) {
+            responder(responses);
           });
-        });
-      }
-    };
-  };
+        };
 
-  window.Comms = Comms;
-}());
+        transmission.transport(transmission.options, function (resp) {
+          if (typeof transmission.transform === 'function') {
+            handler(transmission.transform(resp));
+          }
+          else {
+            handler(resp);
+          }
+        });
+      });
+    }
+  };
+};
+
+module.exports = function () {
+  return build([], {}, []);
+};
