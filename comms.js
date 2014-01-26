@@ -1,3 +1,6 @@
+/*jshint esnext:true */
+/*jshint maxlen:80 */
+
 /**
 @module Comms
 @example
@@ -44,7 +47,6 @@ var Comms = function () {
 Comms.TransmissionError = function (message) {
   this.message = message;
 };
-
 Comms.TransmissionError.prototype = new Error();
 
 /**
@@ -152,4 +154,4 @@ var build = function (queue, responses, responders) {
   };
 };
 
-module.exports = Comms;
+export default Comms;

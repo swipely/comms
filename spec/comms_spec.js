@@ -1,5 +1,5 @@
-var expect  = require("expect.js"),
-    Comms   = require('../comms');
+var expect = require('expect.js'),
+    Comms = require('../build/comms').default;
 
 describe('Comms', function () {
   var subject, transmission;
