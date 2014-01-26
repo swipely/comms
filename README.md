@@ -13,6 +13,17 @@ Comms()
   .transmit();
 ```
 
+# API
+
 ## forEveryResponse
 the responders registered with `forEveryResponse` will be called every time a
 request has completed, wether or not all of them have.
+
+# Build
+
+Build comms to your favourite module system.
+
+```javascript
+gulp build --type=yui
+```
+Available options are `amd`, `yui`, `cjs` (through [es6-module-transpiler](https://github.com/square/es6-module-transpiler))
