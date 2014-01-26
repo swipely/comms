@@ -24,9 +24,46 @@
     .transmit();
 **/
 
-"use strict";
+/**
+Main public API.
+Creates a Comms object to add transmissions on.
 
-var freeze = Object.freeze;
+@method Comms
+@return {Object}
+**/
+var Comms = function () {
+  return build([], {}, []);
+};
+
+/**
+@method TransmissionError
+@param {String} message
+@return {TransmissionError}
+@constructor
+**/
+Comms.TransmissionError = function (message) {
+  this.message = message;
+};
+
+Comms.TransmissionError.prototype = new Error();
+
+/**
+@method isValidTransmission
+@param {Object} transmission
+@return {Boolean}
+@static
+**/
+Comms.isValidTransmission = function (transmission) {
+  return (
+    typeof transmission.transport === 'function'  &&
+    typeof transmission.key       === 'string'    &&
+    typeof transmission.options   !== 'undefined' &&
+    (
+      typeof transmission.transform === 'undefined' ||
+      typeof transmission.transform === 'function'
+    )
+  );
+};
 
 /**
 @method build
@@ -63,7 +100,13 @@ var build = function (queue, responses, responders) {
     @return {Object}
     **/
     add: function (transmission) {
-      return freeze(build(queue.concat(transmission), responses, responders));
+      if (!Comms.isValidTransmission(transmission)) {
+        throw new Comms.TransmissionError();
+      }
+
+      return Object.freeze(
+        build(queue.concat(transmission), responses, responders)
+      );
     },
 
     /**
@@ -74,7 +117,9 @@ var build = function (queue, responses, responders) {
     @return {Object}
     **/
     forEveryResponse: function (responder) {
-      return freeze(build(queue, responses, responders.concat(responder)));
+      return Object.freeze(
+        build(queue, responses, responders.concat(responder))
+      );
     },
 
     /**
@@ -84,7 +129,7 @@ var build = function (queue, responses, responders) {
     **/
     transmit: function () {
       queue.forEach(function (transmission) {
-        // server responds
+        // collect response and invoke responders
         var handler = function (resp) {
           responses[transmission.key] = resp;
 
@@ -93,6 +138,7 @@ var build = function (queue, responses, responders) {
           });
         };
 
+        // send transmission
         transmission.transport(transmission.options, function (resp) {
           if (typeof transmission.transform === 'function') {
             handler(transmission.transform(resp));
@@ -106,6 +152,4 @@ var build = function (queue, responses, responders) {
   };
 };
 
-module.exports = function () {
-  return build([], {}, []);
-};
+module.exports = Comms;
