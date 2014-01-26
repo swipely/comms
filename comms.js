@@ -1,36 +1,155 @@
-(function () {
-  var Comms = function (queue, responses, responders) {
-    return configure([], {}, []);
+/**
+@module Comms
+@example
+  using jQuery's ajax as the transport
+
+  var fooTransmission = {
+    transport: $.ajax,
+    key: 'foo',
+    options: { url: '/foo.json', method: 'get' }
   };
 
-  var configure = function (queue, responses, responders) {
-    return {
-      add: function (requestOptions, params) {
-        return configure(queue.concat(requestOptions), responses, responders);
-      },
+  var barTransmission = {
+    transport: $.ajax,
+    key: 'bar',
+    options: { url: '/bar.json', method: 'get' }
+  };
 
-      forEveryResponse: function (responder) {
-        return configure(queue, responses, responders.concat(responder));
-      },
+  Comms()
+    .add(fooTransmission)
+    .add(barTransmission)
+    .forEveryResponse(function (responses) {
+      // do something with responses.foo or responses.bar
+    })
+    .transmit();
+**/
 
-      transmit: function () {
-        queue.forEach(function (requestOptions) {
-          // server responds
-          var handler = function (resp) {
-            responses[requestOptions.key] = resp;
+/**
+Main public API.
+Creates a Comms object to add transmissions on.
 
-            responders.forEach(function (responder) {
-              responder(responses);
-            });
-          };
+@method Comms
+@return {Object}
+**/
+var Comms = function () {
+  return build([], {}, []);
+};
 
-          requestOptions.transport(requestOptions.request, function (resp) {
-            handler(requestOptions.transform(resp));
-          });
-        });
+/**
+@method TransmissionError
+@param {String} message
+@return {TransmissionError}
+@constructor
+**/
+Comms.TransmissionError = function (message) {
+  this.message = message;
+};
+
+Comms.TransmissionError.prototype = new Error();
+
+/**
+@method isValidTransmission
+@param {Object} transmission
+@return {Boolean}
+@static
+**/
+Comms.isValidTransmission = function (transmission) {
+  return (
+    typeof transmission.transport === 'function'  &&
+    typeof transmission.key       === 'string'    &&
+    typeof transmission.options   !== 'undefined' &&
+    (
+      typeof transmission.transform === 'undefined' ||
+      typeof transmission.transform === 'function'
+    )
+  );
+};
+
+/**
+@method build
+@param {Array} queue
+@param {Object} responses
+@param {Array} responders
+@return {Object}
+**/
+var build = function (queue, responses, responders) {
+  return {
+    /**
+    @property __queue
+    @private
+    **/
+    __queue: queue,
+
+    /**
+    @property __responses
+    @private
+    **/
+    __responses: responses,
+
+    /**
+    @property __responders
+    @private
+    **/
+    __responders: responders,
+
+    /**
+    add an async transmission
+
+    @method add
+    @param {Object} transmission
+    @return {Object}
+    **/
+    add: function (transmission) {
+      if (!Comms.isValidTransmission(transmission)) {
+        throw new Comms.TransmissionError();
       }
-    };
-  };
 
-  window.Comms = Comms;
-}());
+      return Object.freeze(
+        build(queue.concat(transmission), responses, responders)
+      );
+    },
+
+    /**
+    add an async transmission
+
+    @method add
+    @param {Object} transmission
+    @return {Object}
+    **/
+    forEveryResponse: function (responder) {
+      return Object.freeze(
+        build(queue, responses, responders.concat(responder))
+      );
+    },
+
+    /**
+    transmit all added transmissions
+
+    @method transmit
+    **/
+    transmit: function () {
+      queue.forEach(function (transmission) {
+        // collect response and invoke responders
+        var handler = function (resp) {
+          responses[transmission.key] = resp;
+
+          responders.forEach(function (responder) {
+            responder(responses);
+          });
+        };
+
+        // send transmission
+        transmission.transport(transmission.options, function (resp) {
+          if (typeof transmission.transform === 'function') {
+            handler(transmission.transform(resp));
+          }
+          else {
+            handler(resp);
+          }
+        });
+      });
+    }
+  };
+};
+
+module.exports = Comms;

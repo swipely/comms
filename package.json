@@ -1,4 +1,16 @@
 {
   "name": "comms",
-  "license": "MIT"
+  "license": "MIT",
+  "devDependencies": {
+    "expect.js": "~0.2.0",
+    "mocha": "~1.17.1",
+    "gulp-util": "~2.2.12",
+    "gulp": "~3.4.0",
+    "gulp-mocha": "~0.4.1",
+    "gulp-jshint": "~1.3.4",
+    "jshint-stylish": "~0.1.5"
+  },
+  "scripts": {
+    "test": "./node_modules/mocha/bin/mocha spec"
+  }
 }
