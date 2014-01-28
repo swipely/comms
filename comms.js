@@ -39,6 +39,19 @@ var Comms = function () {
 };
 
 /**
+@method isValidPromise
+@param {Object}
+@return {Boolean}
+@private
+**/
+var isValidPromise = function (promise) {
+  return (
+    typeof promise !== 'undefined' &&
+    typeof promise.then === 'function'
+  );
+};
+
+/**
 @method TransmissionError
 @param {String} message
 @return {TransmissionError}
@@ -48,6 +61,17 @@ Comms.TransmissionError = function (message) {
   this.message = message;
 };
 Comms.TransmissionError.prototype = new Error();
+
+/**
+@method TransportError
+@param {String} message
+@return {TransmissionError}
+@constructor
+**/
+Comms.TransportError = function (message) {
+  this.message = message;
+};
+Comms.TransportError.prototype = new Error();
 
 /**
 @method isValidTransmission
@@ -131,6 +155,14 @@ var build = function (queue, responses, responders) {
     **/
     transmit: function () {
       queue.forEach(function (transmission) {
+        var promise = transmission.transport(transmission.options);
+
+        if (!isValidPromise(promise)) {
+          throw new Comms.TransportError(
+            "Please provide a Promise A+ based transport"
+          );
+        }
+
         // collect response and invoke responders
         var handler = function (resp) {
           responses[transmission.key] = resp;
@@ -140,8 +172,7 @@ var build = function (queue, responses, responders) {
           });
         };
 
-        // send transmission
-        transmission.transport(transmission.options, function (resp) {
+        promise.then(function (resp) {
           if (typeof transmission.transform === 'function') {
             handler(transmission.transform(resp));
           }

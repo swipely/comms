@@ -2,14 +2,19 @@ var expect = require('expect.js'),
     Comms = require('../build/comms').default;
 
 describe('Comms', function () {
-  var subject, transmission;
+  var subject, transmission, promise;
 
   beforeEach(function () {
+    promise = function () {
+      return { then: function () {} };
+    };
+
     transmission = {
-      transport: function () {},
+      transport: promise,
       key: 'foo',
       options: 'bar'
     };
+
     subject = Comms();
   });
 
@@ -77,7 +82,7 @@ describe('Comms', function () {
         foo: 'bar'
       };
 
-      it('it throws an exception', function () {
+      it('throws TransmissionError', function () {
         expect(function () {
           subject.add(brokenTransmission);
         }).to.throwException(function (ex) {
@@ -104,46 +109,72 @@ describe('Comms', function () {
           transport: function (options) {
             expect( options ).to.eql({ url: '/foo.json' });
             done();
+            return { then: function () {} };
           },
           options: { url: '/foo.json' },
           key: 'foo'
         })
         .transmit();
     });
-  });
 
-  describe('when a transmission responds', function () {
-    it('passes all available responses to the responders', function (done) {
-      subject
-        .add({
-          transport: function (options, callback) {
-            callback('bar');
-          },
-          options: {},
-          key: 'foo'
-        })
-        .forEveryResponse(function (responses) {
-          expect( responses ).to.eql( { foo: 'bar' });
-          done();
-        })
-        .transmit();
+    describe('when the transport is not a promise', function () {
+      it('throws TransportError', function () {
+        expect(function () {
+          subject
+            .add({
+              transport: function () {},
+              options: {},
+              key: 'foo'
+            })
+            .transmit();
+        }).to.throwException(function (ex) {
+          console.log(ex);
+          expect(ex instanceof Comms.TransportError).to.be(true);
+        });
+      });
     });
 
-    describe('and a transformer has been defined', function () {
-      it('passes the response through the transformer before the callback', function (done) {
+    describe('when a transmission responds', function () {
+      it('passes all available responses to the responders', function (done) {
         subject
           .add({
-            transport: function (options, callback) {
-              callback('bar');
-            },
-            transform: function (resp) {
-              expect( resp ).to.be('bar');
-              done();
+            transport: function (options) {
+              return {
+                then: function (callback) {
+                  callback('bar');
+                }
+              };
             },
             options: {},
             key: 'foo'
           })
+          .forEveryResponse(function (responses) {
+            expect( responses ).to.eql( { foo: 'bar' });
+            done();
+          })
           .transmit();
+      });
+
+      describe('and a transformer has been defined', function () {
+        it('passes the response through the transformer before the callback', function (done) {
+          subject
+            .add({
+              transport: function (options) {
+                return {
+                  then: function (callback) {
+                    callback('bar');
+                  }
+                };
+              },
+              transform: function (resp) {
+                expect( resp ).to.be('bar');
+                done();
+              },
+              options: {},
+              key: 'foo'
+            })
+            .transmit();
+        });
       });
     });
   });
