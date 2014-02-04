@@ -32,8 +32,9 @@ var transmission = {
 Use `Comms.isValidTransmission` to verify your transmission.
 
 ## forEveryResponse
-the responder registered with `forEveryResponse` will be called every time a
-request has completed, whether or not all of them have.
+The responder registered with `forEveryResponse` will be called every time a request has completed, whether or not all of them have. 
+
+The arguments will be passed to that responder in the order the transmissions were added in.
 
 # Build
 
