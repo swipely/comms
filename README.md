@@ -5,12 +5,11 @@ Tiny functional async wrapper for response composition
 
 ```javascript
 Comms()
-  .add({ transport: $.ajax, key: 'foo', options: { url: '/foo.json', method: 'get' }})
-  .add({ transport: $.ajax, key: 'bar', options: { url: '/bar.json', method: 'get' }})
-  .forEveryResponse(function (responses) {
-    // do something with responses.foo or responses.bar
-  })
-  .transmit();
+  .add({ transport: $.ajax, options: { url: '/foo.json', method: 'get' }})
+  .add({ transport: $.ajax, options: { url: '/bar.json', method: 'get' }})
+  .forEveryResponse(function (fooResponse, barResponse) {
+    // do something with the responses
+  });
 ```
 
 * The transport must be Promise A+ compatible.
@@ -26,8 +25,7 @@ A transmission should look like this:
 var transmission = {
   transport: $.ajax, // Promise based transport
   options: { url: '/foo.json', method: 'get' }, // options for the transport
-  key: 'foo', // key for the responses hash (see `forEveryResponse`)
-  transform: function (resp) {} // optional data transformer - it's return value will be passed to the `forEveryResponse` callback
+  transform: function (resp) {} // optional data transformer to be called on the response - it's return value will be passed to the `forEveryResponse` callback
 };
 ```
 
@@ -35,10 +33,7 @@ Use `Comms.isValidTransmission` to verify your transmission.
 
 ## forEveryResponse
 the responder registered with `forEveryResponse` will be called every time a
-request has completed, wether or not all of them have.
-
-## transmit
-Execute all transmissions
+request has completed, whether or not all of them have.
 
 # Build
 
