@@ -108,13 +108,15 @@ describe('Comms', function () {
     });
 
     describe('when a transmission responds', function () {
-      it('passes all available responses to the responder', function (done) {
+      it('passes all available responses to the responder in order', function (done) {
         subject
           .add({
             transport: function (options) {
               return {
                 then: function (callback) {
-                  callback('bar');
+                  setTimeout(function () {
+                    callback('bar');
+                  }, 100)
                 }
               };
             },
@@ -131,15 +133,18 @@ describe('Comms', function () {
             options: {},
           })
           .forEveryResponse(function (barResponse, fooResponse) {
-            if (barResponse && fooResponse) {
+            // foo will complete before bar
+            if (!barResponse && fooResponse) {
+              expect( barResponse ).to.eql( undefined );
+              expect( fooResponse ).to.eql( 'foo' );
+            }
+            else if (barResponse && fooResponse) {
               expect( barResponse ).to.eql( 'bar' );
               expect( fooResponse ).to.eql( 'foo' );
             }
           });
 
-          // can't put done() call in forEveryResponse
-          // as it's called multiple times
-          setTimeout(done, 300);
+          setTimeout(done, 200);
       });
 
       describe('and a transformer has been defined', function () {

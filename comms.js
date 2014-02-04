@@ -101,7 +101,7 @@ var build = function (queue, responses) {
   @method transmit
   **/
   var transmit = function (responder) {
-    queue.forEach(function (transmission) {
+    queue.forEach(function (transmission, index) {
       var promise = transmission.transport(transmission.options);
 
       if (!isValidPromise(promise)) {
@@ -112,7 +112,9 @@ var build = function (queue, responses) {
 
       // collect response and invoke responder
       var handler = function (resp) {
-        responses.push(resp);
+        var orderedResponses = new Array(queue.length);
+
+        responses[index] = resp;
 
         responder.apply(null, responses);
       };
