@@ -8,23 +8,20 @@
 
   var fooTransmission = {
     transport: $.ajax,
-    key: 'foo',
     options: { url: '/foo.json', method: 'get' }
   };
 
   var barTransmission = {
     transport: $.ajax,
-    key: 'bar',
     options: { url: '/bar.json', method: 'get' }
   };
 
   Comms()
     .add(fooTransmission)
     .add(barTransmission)
-    .forEveryResponse(function (responses) {
-      // do something with responses.foo or responses.bar
+    .forEveryResponse(function (fooResponse, barResponse) {
+      // do something with the responses
     })
-    .transmit();
 **/
 
 /**
@@ -35,7 +32,7 @@ Creates a Comms object to add transmissions on.
 @return {Object}
 **/
 var Comms = function () {
-  return build([], {}, []);
+  return build([], []);
 };
 
 /**
@@ -82,7 +79,6 @@ Comms.TransportError.prototype = new Error();
 Comms.isValidTransmission = function (transmission) {
   return (
     typeof transmission.transport === 'function'  &&
-    typeof transmission.key       === 'string'    &&
     typeof transmission.options   !== 'undefined' &&
     (
       typeof transmission.transform === 'undefined' ||
@@ -94,11 +90,47 @@ Comms.isValidTransmission = function (transmission) {
 /**
 @method build
 @param {Array} queue
-@param {Object} responses
-@param {Array} responders
+@param {Array} responses
 @return {Object}
 **/
-var build = function (queue, responses, responders) {
+var build = function (queue, responses) {
+
+  /**
+  transmit all added transmissions
+
+  @method transmit
+  **/
+  var transmit = function (responder) {
+    queue.forEach(function (transmission) {
+      var promise = transmission.transport(transmission.options);
+
+      if (!isValidPromise(promise)) {
+        throw new Comms.TransportError(
+          "Please provide a Promise A+ based transport"
+        );
+      }
+
+      // collect response and invoke responder
+      var handler = function (resp) {
+        responses.push(resp);
+
+        responder.apply(null, responses);
+      };
+
+      promise.then(
+        function (resp) {
+          if (typeof transmission.transform === 'function') {
+            handler(transmission.transform(resp));
+          }
+          else {
+            handler(resp);
+          }
+        },
+        function (resp) { handler(resp) }
+      );
+    });
+  };
+
   return {
     /**
     @property __queue
@@ -113,12 +145,6 @@ var build = function (queue, responses, responders) {
     __responses: responses,
 
     /**
-    @property __responders
-    @private
-    **/
-    __responders: responders,
-
-    /**
     add an async transmission
 
     @method add
@@ -131,57 +157,21 @@ var build = function (queue, responses, responders) {
       }
 
       return Object.freeze(
-        build(queue.concat(transmission), responses, responders)
+        build(queue.concat(transmission), responses)
       );
     },
 
     /**
-    add an async transmission
+    transmit with the given callback method
 
-    @method add
-    @param {Object} transmission
+    @method forEveryResponse
+    @param {Function} responder
     @return {Object}
     **/
     forEveryResponse: function (responder) {
-      return Object.freeze(
-        build(queue, responses, responders.concat(responder))
-      );
-    },
-
-    /**
-    transmit all added transmissions
-
-    @method transmit
-    **/
-    transmit: function () {
-      queue.forEach(function (transmission) {
-        var promise = transmission.transport(transmission.options);
-
-        if (!isValidPromise(promise)) {
-          throw new Comms.TransportError(
-            "Please provide a Promise A+ based transport"
-          );
-        }
-
-        // collect response and invoke responders
-        var handler = function (resp) {
-          responses[transmission.key] = resp;
-
-          responders.forEach(function (responder) {
-            responder(responses);
-          });
-        };
-
-        promise.then(function (resp) {
-          if (typeof transmission.transform === 'function') {
-            handler(transmission.transform(resp));
-          }
-          else {
-            handler(resp);
-          }
-        });
-      });
+      transmit(responder);
     }
+
   };
 };
 

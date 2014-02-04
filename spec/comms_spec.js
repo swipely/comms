@@ -11,7 +11,6 @@ describe('Comms', function () {
 
     transmission = {
       transport: promise,
-      key: 'foo',
       options: 'bar'
     };
 
@@ -22,26 +21,14 @@ describe('Comms', function () {
     describe('with an invalid transport', function () {
         expect( Comms.isValidTransmission({
           transport: 'invalid',
-          key: 'foo',
           options: {}
         }) ).to.be( false );
-    });
-
-    describe('with an invalid key', function () {
-      it('returns false', function () {
-        expect( Comms.isValidTransmission({
-          transport: function () {},
-          key: function () {},
-          options: {}
-        }) ).to.be( false );
-      });
     });
 
     describe('with invalid options', function () {
       it('returns false', function () {
         expect( Comms.isValidTransmission({
           transport: function () {},
-          key: 'foo'
         }) ).to.be( false );
       });
     });
@@ -50,7 +37,6 @@ describe('Comms', function () {
       it('returns false', function () {
         expect( Comms.isValidTransmission({
           transport: function () {},
-          key: 'foo',
           options: {},
           transform: 'nope'
         }) ).to.be( false );
@@ -61,7 +47,6 @@ describe('Comms', function () {
       it('returns true', function () {
         expect( Comms.isValidTransmission({
           transport: function () {},
-          key: 'foo',
           options: {},
           transform: function () {}
         }) ).to.be( true );
@@ -93,16 +78,6 @@ describe('Comms', function () {
   });
 
   describe('#forEveryResponse', function () {
-    it('adds a transmission responder', function () {
-      var responder = function () {};
-
-      expect( subject.forEveryResponse(responder).__responders ).to.eql([
-        responder
-      ]);
-    });
-  });
-
-  describe('#transmit', function () {
     it('executes transmissions', function (done) {
       subject
         .add({
@@ -112,9 +87,8 @@ describe('Comms', function () {
             return { then: function () {} };
           },
           options: { url: '/foo.json' },
-          key: 'foo'
         })
-        .transmit();
+        .forEveryResponse(function () {});
     });
 
     describe('when the transport is not a promise', function () {
@@ -124,9 +98,8 @@ describe('Comms', function () {
             .add({
               transport: function () {},
               options: {},
-              key: 'foo'
             })
-            .transmit();
+            .forEveryResponse(function () {});
         }).to.throwException(function (ex) {
           console.log(ex);
           expect(ex instanceof Comms.TransportError).to.be(true);
@@ -135,7 +108,7 @@ describe('Comms', function () {
     });
 
     describe('when a transmission responds', function () {
-      it('passes all available responses to the responders', function (done) {
+      it('passes all available responses to the responder', function (done) {
         subject
           .add({
             transport: function (options) {
@@ -146,13 +119,27 @@ describe('Comms', function () {
               };
             },
             options: {},
-            key: 'foo'
           })
-          .forEveryResponse(function (responses) {
-            expect( responses ).to.eql( { foo: 'bar' });
-            done();
+          .add({
+            transport: function (options) {
+              return {
+                then: function (callback) {
+                  callback('foo');
+                }
+              };
+            },
+            options: {},
           })
-          .transmit();
+          .forEveryResponse(function (barResponse, fooResponse) {
+            if (barResponse && fooResponse) {
+              expect( barResponse ).to.eql( 'bar' );
+              expect( fooResponse ).to.eql( 'foo' );
+            }
+          });
+
+          // can't put done() call in forEveryResponse
+          // as it's called multiple times
+          setTimeout(done, 300);
       });
 
       describe('and a transformer has been defined', function () {
@@ -171,9 +158,8 @@ describe('Comms', function () {
                 done();
               },
               options: {},
-              key: 'foo'
             })
-            .transmit();
+            .forEveryResponse(function () {} );
         });
       });
     });
