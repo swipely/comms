@@ -11,7 +11,6 @@ describe('Comms', function () {
 
     transmission = {
       transport: promise,
-      key: 'foo',
       options: 'bar'
     };
 
@@ -22,26 +21,14 @@ describe('Comms', function () {
     describe('with an invalid transport', function () {
         expect( Comms.isValidTransmission({
           transport: 'invalid',
-          key: 'foo',
           options: {}
         }) ).to.be( false );
-    });
-
-    describe('with an invalid key', function () {
-      it('returns false', function () {
-        expect( Comms.isValidTransmission({
-          transport: function () {},
-          key: function () {},
-          options: {}
-        }) ).to.be( false );
-      });
     });
 
     describe('with invalid options', function () {
       it('returns false', function () {
         expect( Comms.isValidTransmission({
           transport: function () {},
-          key: 'foo'
         }) ).to.be( false );
       });
     });
@@ -50,7 +37,6 @@ describe('Comms', function () {
       it('returns false', function () {
         expect( Comms.isValidTransmission({
           transport: function () {},
-          key: 'foo',
           options: {},
           transform: 'nope'
         }) ).to.be( false );
@@ -61,7 +47,6 @@ describe('Comms', function () {
       it('returns true', function () {
         expect( Comms.isValidTransmission({
           transport: function () {},
-          key: 'foo',
           options: {},
           transform: function () {}
         }) ).to.be( true );
@@ -93,16 +78,6 @@ describe('Comms', function () {
   });
 
   describe('#forEveryResponse', function () {
-    it('adds a transmission responder', function () {
-      var responder = function () {};
-
-      expect( subject.forEveryResponse(responder).__responders ).to.eql([
-        responder
-      ]);
-    });
-  });
-
-  describe('#transmit', function () {
     it('executes transmissions', function (done) {
       subject
         .add({
@@ -112,9 +87,8 @@ describe('Comms', function () {
             return { then: function () {} };
           },
           options: { url: '/foo.json' },
-          key: 'foo'
         })
-        .transmit();
+        .forEveryResponse(function(){});
     });
 
     describe('when the transport is not a promise', function () {
@@ -123,10 +97,9 @@ describe('Comms', function () {
           subject
             .add({
               transport: function () {},
-              options: {},
-              key: 'foo'
+              options: {}
             })
-            .transmit();
+            .forEveryResponse(function () {});
         }).to.throwException(function (ex) {
           console.log(ex);
           expect(ex instanceof Comms.TransportError).to.be(true);
@@ -145,14 +118,12 @@ describe('Comms', function () {
                 }
               };
             },
-            options: {},
-            key: 'foo'
+            options: {}
           })
-          .forEveryResponse(function (responses) {
-            expect( responses ).to.eql( { foo: 'bar' });
+          .forEveryResponse(function (foo) {
+            expect( foo ).to.eql( 'bar' );
             done();
           })
-          .transmit();
       });
 
       describe('and a transformer has been defined', function () {
@@ -170,10 +141,9 @@ describe('Comms', function () {
                 expect( resp ).to.be('bar');
                 done();
               },
-              options: {},
-              key: 'foo'
+              options: {}
             })
-            .transmit();
+            .forEveryResponse(function(){});
         });
       });
     });
