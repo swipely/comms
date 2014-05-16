@@ -63,6 +63,7 @@ Build Comms, optionally to your favourite module system. Comms defaults to Commo
 ```
 gulp
 ```
+Or to create YUI modules:
 ```
 gulp --type=yui
 ```
@@ -72,5 +73,5 @@ Available options are `amd`, `yui`, `cjs` (through [es6-module-transpiler](https
 
 Run the tests:
 ```
-gulp test
+npm test
 ```
