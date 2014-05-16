@@ -22,3 +22,5 @@ gulp.task('lint', function() {
       .pipe(jshint())
       .pipe(jshint.reporter(jshintStylish));
 });
+
+gulp.task('default', ['build']);
