@@ -27,13 +27,16 @@ A transmission should look like this:
 var transmission = {
   transport: $.ajax,
   options:   { url: '/foo.json', method: 'get' },
-  transform: function (resp) { }
+  transform: function (resp) { },
+  errorTransform: function (resp) { }
 };
 ```
 In the above transmission:
 * `transport` Any Promise-based transport. Ie. Ajax, LocalStorage, SQLite, CouchDB, etc.
 * `options` Options to be passed directly to the transport.
 * `transform` An optional callback to transform the response. The transform's return value will be passed to the `forEveryResponse` callback.
+* `errorTransform` An optional callback to transform an error response. The return value will be passed to the `forEveryResponse` callback.
+
 
 See `Comms.isValidTransmission` to verify your transmission.
 

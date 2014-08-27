@@ -167,6 +167,30 @@ describe('Comms', function () {
             .forEveryResponse(function () {} );
         });
       });
+
+      describe('and an error transformer has been defined', function () {
+        it('passes the response through the transformer before the callback', function (done) {
+          subject
+            .add({
+              transport: function (options) {
+                return {
+                  then: function (successCallback, errorCallback) {
+                    errorCallback('error response');
+                  }
+                };
+              },
+              transform: function (resp) {
+              },
+              errorTransform: function (resp) {
+                expect( resp ).to.be('error response');
+                done();
+              },
+              options: {},
+            })
+            .forEveryResponse(function () {} );
+        });
+      });
+
     });
   });
 });

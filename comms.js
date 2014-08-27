@@ -128,7 +128,14 @@ var build = function (queue, responses) {
             handler(resp);
           }
         },
-        function (resp) { handler(resp) }
+        function (resp) {
+          if (typeof transmission.errorTransform === 'function') {
+            handler(transmission.errorTransform(resp));
+          }
+          else {
+            handler(resp);
+          }
+        }
       );
     });
   };
